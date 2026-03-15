@@ -31,11 +31,13 @@ export default function Button({
       whileTap={disabled ? {} : { scale: 0.98 }}
       onClick={onClick}
       disabled={disabled || loading}
+      style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation', ...props.style }}
       className={`
         rounded-full font-semibold cursor-pointer transition-all duration-200
         inline-flex items-center justify-center gap-2
         disabled:opacity-50 disabled:cursor-not-allowed
         border-none outline-none
+        relative
         ${variants[variant]}
         ${sizes[size]}
         ${className}

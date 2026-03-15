@@ -1,64 +1,35 @@
 export async function generateJapaAnalysis(quizData, localScore) {
-  const systemPrompt = `You are an expert Nigerian immigration advisor with 15 years of experience helping Nigerians relocate to Canada, UK, USA, Germany, Australia, Netherlands, and other countries. You are deeply familiar with: Express Entry, UK Skilled Worker visa, US EB visas, Australian General Skilled Migration, and other pathways. You understand the Nigerian context: NYSC, WAEC, HND vs BSc issues, WES evaluation, IELTS preparation in Nigeria, OPay/bank statement issues, Nigerian passport challenges, and the emotional weight of wanting to Japa.
-
-Be direct, specific, warm but honest. Use the person's first name. Do NOT give generic advice. Reference actual visa programs by name. Mention real financial thresholds.
-
-Respond ONLY with valid JSON matching the exact schema provided. No preamble, no markdown.`;
-
-  const firstName = quizData.fullName?.split(' ')[0] || 'there';
-
-  const userPrompt = `Analyze this Nigerian's Japa readiness and generate a comprehensive immigration analysis.
-
-PROFILE DATA:
-${JSON.stringify(quizData, null, 2)}
-
-LOCAL SCORE (for reference, do not just echo this):
-${JSON.stringify(localScore, null, 2)}
-
-Generate the analysis JSON with these exact keys:
-{
-  "summary": string,
-  "top_blockers": array of {title, severity, explanation, fix},
-  "country_matches": array of {country, flag, compatibility_score, best_pathway, why_good_fit, main_challenge, estimated_timeline, estimated_cost_usd},
-  "action_plan": array of {phase, title, tasks: [{task, priority, resource_hint}]},
-  "quick_wins": array of strings,
-  "motivational_close": string
-}
-
-Use the person's first name (${firstName}). Be specific to their exact profile.
-If they're a nurse, reference NMC registration for UK. If they're in tech, mention specific visa categories.
-If their savings are low, give specific savings targets in Naira. Make this feel personally crafted.`;
-
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
-  if (!apiKey) {
-    return getMockAnalysis(quizData, localScore);
-  }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
-  });
-
-  const data = await response.json();
-  const text = data.content[0].text;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
 
   try {
-    return JSON.parse(text);
-  } catch {
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleaned);
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ quizData, localScore }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server returned ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (err) {
+    clearTimeout(timeoutId);
+
+    if (err.name === 'AbortError') {
+      console.warn('AI analysis timed out after 30 seconds, using fallback');
+      return getMockAnalysis(quizData, localScore);
+    }
+
+    console.error('AI analysis failed:', err);
+    throw err;
   }
 }
 
@@ -155,5 +126,6 @@ function getMockAnalysis(quizData, localScore) {
       'Open a dedicated "Japa Fund" savings account today',
     ],
     motivational_close: `${firstName}, your journey to ${country} is absolutely possible. Thousands of Nigerians with similar profiles have successfully relocated. The key is taking consistent action — start with your IELTS booking this week, and everything else will follow. You've got this! 🇳🇬✈️`,
+    _isFallback: true,
   };
 }

@@ -1,9 +1,11 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Share2, Lock } from 'lucide-react';
+import { Share2, Lock, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useScore } from '../hooks/useScore';
 import { useQuizStore } from '../store/quizStore';
+import { generateJapaAnalysis } from '../lib/anthropic';
+import { useResultsStore } from '../store/resultsStore';
 import ScoreCard from '../components/results/ScoreCard';
 import ScoreBreakdown from '../components/results/ScoreBreakdown';
 import GapAnalysis from '../components/results/GapAnalysis';
@@ -38,10 +40,27 @@ function AnimatedCounter({ value, duration = 1.5 }) {
 
 export default function Results() {
   const navigate = useNavigate();
-  const { scoreData, aiAnalysis, loading } = useScore();
+  const { scoreData, aiAnalysis, loading, error } = useScore();
   const { answers } = useQuizStore();
+  const { setAiAnalysis, setError } = useResultsStore();
   const scoreCardRef = useRef(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+
+  const retryAnalysis = async () => {
+    if (!scoreData) return;
+    setRetrying(true);
+    setError(null);
+    try {
+      const analysis = await generateJapaAnalysis(answers, scoreData);
+      setAiAnalysis(analysis);
+    } catch (err) {
+      console.error('Retry failed:', err);
+      setError('AI analysis is still unavailable. Please try again later.');
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   // Redirect if no score data
   useEffect(() => {
@@ -146,6 +165,18 @@ export default function Results() {
           {/* AI Analysis Section */}
           {aiAnalysis ? (
             <>
+              {aiAnalysis._isFallback && (
+                <div className="bg-[var(--surface)] border border-[var(--accent-warm)]/30 rounded-2xl p-4 flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-[var(--accent-warm)] flex-shrink-0" />
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    AI analysis timed out. Showing general recommendations. You can retry for personalized analysis.
+                  </p>
+                  <Button size="sm" variant="ghost" onClick={retryAnalysis} disabled={retrying}>
+                    <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} />
+                    Retry
+                  </Button>
+                </div>
+              )}
               <GapAnalysis blockers={aiAnalysis.top_blockers} />
               <CountryMatch matches={aiAnalysis.country_matches} />
               <ActionPlan actionPlan={aiAnalysis.action_plan} quickWins={aiAnalysis.quick_wins} />
@@ -159,10 +190,25 @@ export default function Results() {
                 </div>
               )}
             </>
+          ) : error ? (
+            <div className="bg-[var(--surface)] border border-[var(--accent-danger)]/30 rounded-2xl p-8 text-center">
+              <AlertTriangle className="w-10 h-10 text-[var(--accent-danger)] mx-auto mb-3" />
+              <h3 className="text-lg font-bold mb-2">AI Analysis Unavailable</h3>
+              <p className="text-sm text-[var(--text-secondary)] mb-4 max-w-md mx-auto">
+                {error}
+              </p>
+              <Button variant="secondary" onClick={retryAnalysis} disabled={retrying}>
+                <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} />
+                {retrying ? 'Retrying...' : 'Try Again'}
+              </Button>
+            </div>
           ) : (
             <div className="flex flex-col gap-4">
               <div className="skeleton h-48 rounded-2xl" />
               <div className="skeleton h-48 rounded-2xl" />
+              <p className="text-center text-sm text-[var(--text-muted)]">
+                Generating your personalized AI analysis...
+              </p>
             </div>
           )}
 

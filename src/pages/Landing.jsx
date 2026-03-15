@@ -36,7 +36,7 @@ export default function Landing() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
+      <section className="relative min-h-screen flex items-center justify-center" style={{ background: 'var(--gradient-hero)' }}>
         <div className="particle-grid" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -66,7 +66,12 @@ export default function Landing() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="flex flex-col sm:flex-row items-start gap-4"
             >
-              <Button size="lg" onClick={() => navigate('/quiz')}>
+              <Button
+                size="lg"
+                onClick={() => navigate('/quiz')}
+                className="relative z-50 min-h-[48px]"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+              >
                 Get My Japa Score — It's Free
                 <ArrowRight className="w-5 h-5" />
               </Button>
