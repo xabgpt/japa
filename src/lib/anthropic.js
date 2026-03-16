@@ -1,6 +1,6 @@
 export async function generateJapaAnalysis(quizData, localScore) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60-second timeout
 
   try {
     const response = await fetch('/api/analyze', {
@@ -24,7 +24,7 @@ export async function generateJapaAnalysis(quizData, localScore) {
     clearTimeout(timeoutId);
 
     if (err.name === 'AbortError') {
-      console.warn('AI analysis timed out after 30 seconds, using fallback');
+      console.warn('AI analysis timed out after 60 seconds, using fallback');
       return getMockAnalysis(quizData, localScore);
     }
 
