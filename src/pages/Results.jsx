@@ -165,18 +165,6 @@ export default function Results() {
           {/* AI Analysis Section */}
           {aiAnalysis ? (
             <>
-              {aiAnalysis._isFallback && (
-                <div className="bg-[var(--surface)] border border-[var(--accent-warm)]/30 rounded-2xl p-4 flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-[var(--accent-warm)] flex-shrink-0" />
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    AI analysis timed out. Showing general recommendations. You can retry for personalized analysis.
-                  </p>
-                  <Button size="sm" variant="ghost" onClick={retryAnalysis} disabled={retrying}>
-                    <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} />
-                    Retry
-                  </Button>
-                </div>
-              )}
               <GapAnalysis blockers={aiAnalysis.top_blockers} />
               <CountryMatch matches={aiAnalysis.country_matches} />
               <ActionPlan actionPlan={aiAnalysis.action_plan} quickWins={aiAnalysis.quick_wins} />
